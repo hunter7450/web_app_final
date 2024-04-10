@@ -22,6 +22,11 @@ def signup():
     log = 'login'
     return render_template('signup.html', log_index=log)
 
+@app.route('/about')
+def about():
+    log = 'about'
+    return render_template('about.html', log_index=log)
+
 if __name__ == '__main__':
     app.debug = True
     ip = '127.0.0.1'

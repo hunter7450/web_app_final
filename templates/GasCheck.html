@@ -21,18 +21,19 @@
 
 <div id="map" style="height: 400px; width: 100%; max-width: 800px; margin-top: 5%; margin-left: auto; margin-right: auto; "></div>
 <script>
+    var map;
+    var markerGroups;
 
     function getUserInput() {
         var radius = document.getElementById("radius_input").value;
 
         navigator.geolocation.getCurrentPosition(position => {
             const {latitude, longitude} = position.coords;
-            var map = initMap(latitude, longitude)
+            initMap(latitude, longitude); // no need to assign to var map
 
             fetchGasStation(latitude, longitude, radius)
             .then(gasStations => {
-                addGasStationMarkers(gasStations, map);
-
+                addGasStationMarkers(gasStations);
             });
         });
     }
@@ -62,35 +63,53 @@
     .then(data => {
         return data.elements.map(element => ({
             lat: element.lat,
-            lon: element.lon
+            lon: element.lon,
+            name: element.tags.name || "Can't Find Name",
+            street: element.tags['addr:street'] || 'Street Not Specified'
         }));
     })
     .catch(error => console.error('Error fetching gas stations:', error));
+
 }
     
     // Use the user location to place marker on a map
     function initMap(latitude, longitude) {
-        var map = L.map('map').setView([latitude, longitude], 13)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
-            
-        }).addTo(map);
+        if (!map) {
+            map = L.map('map').setView([latitude, longitude], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'        
+            }).addTo(map);
+        } else {
+            map.setView([latitude, longitude], 13);
+        }
 
-        var currentLocationMarker = L.marker([latitude, longitude]).addTo(map);
-        currentLocationMarker.bindPopup();
+        if (markerGroups) {
+            markerGroups.clearLayers();
+        } else {
+            markerGroups = L.layerGroup().addTo(map);
+        }
 
-        return map;
+        var currentLocationMarker = L.marker([latitude, longitude]);
+        currentLocationMarker.bindPopup("Current Location").addTo(markerGroups);
     }
 
     // Adds the gas station markers to the map
-    function addGasStationMarkers(gasStations, map) {
+    function addGasStationMarkers(gasStations) {
         gasStations.forEach(station => {
-            var marker = L.marker([station.lat, station.lon], {icon: gasStationIcon}).addTo(map); 
-            marker.bindPopup("Gas Station");
+            var marker = L.marker([station.lat, station.lon], {icon: gasStationIcon});
+            marker.bindPopup(station.name + " " + station.street).addTo(markerGroups);
+        });
+    } 
+
+    $(document).ready(function(){
+        $("#hide").click(function(){
+            $("table").hide();
+        });
+        $("#show").click(function(){
+            $("table").show();
+        });
     });
-}
-    
 </script>
 <div id="data-table">
     <table style="width: 60%;">
@@ -101,6 +120,10 @@
         </tr>
         
     </table>
+    <div class="button-center">
+        <button id="hide">Hide Table</button>
+        <button id="show">Show Table</button>
+    </div>
 </div>
 
 {% endblock %}
